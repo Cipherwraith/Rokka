@@ -350,8 +350,8 @@ buildUrl poolOrOyster serverN boardN postN
       | otherwise = urlStyle6
 
     urlStyle1 :: String
-    urlStyle1 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/", poolOrOyster, "/", postFirstFour, "/", fromJust postN, ".dat"]
-    
+    urlStyle1 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
+
     urlStyle2 :: String
     urlStyle2 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/", postFirstFour, "/", postFirstFive, "/", fromJust postN, ".dat.gz"]
 
@@ -362,12 +362,17 @@ buildUrl poolOrOyster serverN boardN postN
     urlStyle4 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/kako/", postFirstThree, "/", fromJust postN, ".dat"]
 
     urlStyle5 :: String
-    urlStyle5 = mconcat ["http://", fromJust serverN, ".2ch.net/vault/_datArea/", fromJust boardN, "/", poolOrOyster, "/", postFirstFour, "/", fromJust postN, ".dat"]
+    urlStyle5 = mconcat ["http://", fromJust serverN, ".2ch.net/vault/_datArea/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
 
     --http://banana3000.maido3.com/~ch2live20/vault/
     -- banana3000.maido3.com/<server>/vault/<board>/oyster/<first four>/<dat>.dat
     urlStyle6 :: String
-    urlStyle6 = mconcat ["http://banana3000.maido3.com/", fromJust serverName2ch, "/vault/", fromJust boardN, "/", poolOrOyster, "/", postFirstFour, "/", fromJust postN, ".dat"]
+    urlStyle6 = mconcat ["http://banana3000.maido3.com/", fromJust serverName2ch, "/vault/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
+
+    -- Check if pool or oyster. If it is oyster, then append the post's first four dat numbers.
+    checkForPool
+      | poolOrOyster == "oyster" = mconcat [poolOrOyster, "/", postFirstFour]
+      | otherwise = poolOrOyster
 
     serverName2ch :: Maybe String
     serverName2ch 
