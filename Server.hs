@@ -1,7 +1,8 @@
 -- Name:          Rokka server
--- Author:        Codemonkey 
+-- Author:        CipherWraith
 -- Contact:       twitter.com/codemonkeyz
--- Last modified: Sat Sep 14 16:01:36 2013
+-- Last modified: Wed Sep 18 19:30:43 PHT 2013
+
 
 
 import Prelude hiding (error)
@@ -44,6 +45,7 @@ import Ops
 import Logger
 import Mosaic
 import ChanBoards
+import Search
 
 main = withSocketsDo $ do
   sock <- listenOn $ PortNumber 80
@@ -53,7 +55,6 @@ main = withSocketsDo $ do
 loop sock = do
   (h,x,z) <- accept sock
   currTime <- epochTime
-  rand <- randomRIO (100,999) :: IO Int
   toLog "ip" $ mconcat [show currTime, " ", encryptT x rand]
   -- process one line at a time
   hSetBuffering h LineBuffering
@@ -351,7 +352,7 @@ buildUrl poolOrOyster serverN boardN postN
 
     urlStyle1 :: String
     urlStyle1 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
-
+    
     urlStyle2 :: String
     urlStyle2 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/", postFirstFour, "/", postFirstFive, "/", fromJust postN, ".dat.gz"]
 
@@ -370,9 +371,9 @@ buildUrl poolOrOyster serverN boardN postN
     urlStyle6 = mconcat ["http://banana3000.maido3.com/", fromJust serverName2ch, "/vault/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
 
     -- Check if pool or oyster. If it is oyster, then append the post's first four dat numbers.
-    checkForPool
+    checkForPool 
       | poolOrOyster == "oyster" = mconcat [poolOrOyster, "/", postFirstFour]
-      | otherwise = poolOrOyster
+      | otherwise = poolOrOyster 
 
     serverName2ch :: Maybe String
     serverName2ch 
@@ -436,17 +437,20 @@ getMsg input = do
       print $ userHash ++ " is authenticated"-- user is authenticated, continue and download the page
       datFile <- getUrl oysterUrl
       addUserToTimer userHash -- add the user's hash to the dat timer
-      if datFile == pageDoesNotExistError
+      if datFile == pageDoesNotExistError || datFileDoesNotExist datFile
         then do
           datFilePool <- getUrl poolUrl -- check if pool exists or not
-          if datFilePool == pageDoesNotExistError -- if pool doesnt exist, just return the error
-            then return datFile -- this will return the error 13
-            else return $ mconcat [success, processDatFile input datFilePool] -- prepend success to pool
-        else return $ mconcat [success, processDatFile input datFile] -- prepend success to oyster
+          if datFilePool == pageDoesNotExistError || datFileDoesNotExist datFilePool -- if pool doesnt exist, just return the error
+            then return pageDoesNotExistError -- this will return the error 13
+            else return $ mconcat [success, pool, n, processDatFile input datFilePool] -- prepend success to pool
+        else return $ mconcat [success, oyster, n, processDatFile input datFile] -- prepend success to oyster
      where
-      success = BL.pack "Success\n"
+      success = BL.pack "success"
+      oyster = BL.pack " - oyster"
+      n = BL.pack "\n"
+      pool = BL.pack " - pool"
       statusExceptionHandler ::  HttpException -> IO BL.ByteString
-      statusExceptionHandler e = (putStrLn "404 not found") >> (return pageDoesNotExistError)
+      statusExceptionHandler e = (putStrLn "404 Not Found") >> (return pageDoesNotExistError)
       oysterUrl = fromMaybe "" $ makeUrl "oyster"
       poolUrl = fromMaybe "" $ makeUrl "pool"
       getUrl url' = simpleHttp url' `X.catch` statusExceptionHandler
