@@ -1,7 +1,7 @@
 -- Name:          Rokka server
 -- Author:        CipherWraith
 -- Contact:       twitter.com/codemonkeyz
--- Last modified: Sat Sep 21 20:15:45 PHT 2013
+-- Last modified: Sat Sep 21 20:15:45 2013
 
 
 
