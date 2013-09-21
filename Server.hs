@@ -56,7 +56,7 @@ main = withSocketsDo $ do
 loop sock = do
   (h,x,z) <- accept sock
   currTime <- epochTime
-  rand <- randomRIO (100000,999999) :: IO Int
+  rand <- randomRIO (1000000,9999999) :: IO Int
   toLog "ip" $ mconcat [show currTime, " ", encryptT x rand]
   -- process one line at a time
   hSetBuffering h LineBuffering
@@ -293,7 +293,7 @@ parseHeader = parseHead . lines
                           else parseHead hs
     checkForEnd headerGet [] = Header "asdf"
     checkForEnd headerGet (h:hs) 
-      | h == "\r\n\r\n" = Header h
+      | h == ("\r\n\r\n") || ("\r\n") = Header h
       | otherwise = checkForEnd headerGet hs
 
 {--
