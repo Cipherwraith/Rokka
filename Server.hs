@@ -1,7 +1,7 @@
 -- Name:          Rokka server
 -- Author:        CipherWraith
 -- Contact:       twitter.com/codemonkeyz
--- Last modified: Sat Sep 21 20:15:45 2013
+-- Last modified: Sat Sep 21 20:15:45 PHT 2013
 
 
 
@@ -293,7 +293,8 @@ parseHeader = parseHead . lines
                           else parseHead hs
     checkForEnd headerGet [] = Header "asdf"
     checkForEnd headerGet (h:hs) 
-      | h == ("\r\n\r\n") || ("\r\n") = Header h
+      | h == ("\r\n\r\n") = Header h
+      | h == ("\r\n") = Header h
       | otherwise = checkForEnd headerGet hs
 
 {--
