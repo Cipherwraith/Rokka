@@ -1,7 +1,7 @@
 -- Name:          Rokka server
 -- Author:        CipherWraith
 -- Contact:       twitter.com/codemonkeyz
--- Last modified: Wed Sep 18 19:30:43 PHT 2013
+-- Last modified: Sat Sep 21 20:15:45 PHT 2013
 
 
 
@@ -16,7 +16,7 @@ import Control.Concurrent
 import Control.Exception as X
 import Control.Arrow hiding (loop)
 
-import qualified Data.ByteString.Lazy as BL hiding (pack)
+import qualified Data.ByteString.Lazy as BL hiding (pack, unpack)
 import qualified Data.ByteString.Lazy.Char8 as BL
 
 import qualified Data.Text.Lazy as T
@@ -37,6 +37,7 @@ import qualified Data.Map as M
 
 import Codec.Compression.GZip
 
+import Header
 import Types
 import Auth
 import Crypt
@@ -55,6 +56,7 @@ main = withSocketsDo $ do
 loop sock = do
   (h,x,z) <- accept sock
   currTime <- epochTime
+  rand <- randomRIO (100000,999999) :: IO Int
   toLog "ip" $ mconcat [show currTime, " ", encryptT x rand]
   -- process one line at a time
   hSetBuffering h LineBuffering
@@ -82,7 +84,7 @@ body h = do
   toLog "parsed" $ mconcat [show currTime, " ", show input]
   
   -- Create the outgoing message with input 
-  msg <- getMsg input :: IO BL.ByteString
+  (msg, code) <- getMsg input :: IO (BL.ByteString, Int)
 
   -- Check if the input asks for raw=0.0. If it does, then gzip the message
   -- returns True if the message is zipped, and False if not. Message is in the snd
@@ -95,10 +97,11 @@ body h = do
   let msg' = snd possiblyCompressedMessage
 
   -- Get the length of the message:
-  let messageLength = BL.length msg'
+  let messageLength = BL.length msg' 
 
   -- Build the outgoing header
-  let outgoingHeader = header isItZipped messageLength
+  let outgoingHeader = buildHeader code isItZipped messageLength :: BL.ByteString
+  toLog "headers" $ mconcat [show currTime, BL.unpack outgoingHeader]
 
   -- For debug
   toLog "debug" $ mconcat [show currTime, " Gzip: ", show isItZipped, " | Content length: ", show messageLength]
@@ -286,8 +289,12 @@ parseHeader = parseHead . lines
     parseHead :: [String] -> Header
     parseHead [] = Header "asdf"
     parseHead (h:hs) = if take 3 h == "GET"
-                          then Header h
+                          then checkForEnd h hs
                           else parseHead hs
+    checkForEnd headerGet [] = Header "asdf"
+    checkForEnd headerGet (h:hs) 
+      | h == "\r\n\r\n" = Header h
+      | otherwise = checkForEnd headerGet hs
 
 {--
  -- Sample get data
@@ -305,6 +312,7 @@ parseHeader = parseHead . lines
 --}
 
 
+{--
 -- Build a header with correct content length
 header isItZipped messageLength
   | isItZipped = BL.pack "HTTP/1.0 200 OK\r\nContent-Length: " 
@@ -316,6 +324,7 @@ header isItZipped messageLength
                       `BL.append` (BL.pack . show $ messageLength) 
                       --`BL.append` BL.pack "\r\nContent-Type: plain/text"
                       `BL.append` BL.pack "\r\n\r\n"
+--}
 
 --subjectTxt="http://kilauea.bbspink.com/megami/subject.txt"
 --datFileExample = "http://kilauea.bbspink.com/megami/dat/1325061495.dat"
@@ -404,7 +413,7 @@ buildUrl poolOrOyster serverN boardN postN
 
 
 -- Download the dat file from the server.
-getMsg :: Input -> IO BL.ByteString
+getMsg :: Input -> IO (BL.ByteString, Int)
 getMsg input = do
   -- get the current time for authorization purposes
   getCurrentTime <- epochTime
@@ -417,7 +426,7 @@ getMsg input = do
   makeUrl poolOrOyster = buildUrl poolOrOyster (server input) (board input) (post input)
 
   -- Check for errors, if no error, then download and return dat file
-  authenticationLogic :: Integer -> IO BL.ByteString
+  authenticationLogic :: Integer -> IO (BL.ByteString, Int)
   authenticationLogic currentTime
     | anInputError = return inputError
     | not . fst $ authenticate currentTime = return authenticationError
@@ -432,30 +441,31 @@ getMsg input = do
     -- Download the dat file and return it
     -- It first checks oyster. If oyster returns 404 not found, then it will check pool. If pool also returns 404 not found,
     -- then it prints "Error 13"
-    downloadAndReturnDatFile :: IO BL.ByteString
+    downloadAndReturnDatFile :: IO (BL.ByteString, Int)
     downloadAndReturnDatFile = do
       print $ userHash ++ " is authenticated"-- user is authenticated, continue and download the page
       datFile <- getUrl oysterUrl
       addUserToTimer userHash -- add the user's hash to the dat timer
-      if datFile == pageDoesNotExistError || datFileDoesNotExist datFile
+      if datFile == (fst pageDoesNotExistError) || datFileDoesNotExist datFile
         then do
           datFilePool <- getUrl poolUrl -- check if pool exists or not
-          if datFilePool == pageDoesNotExistError || datFileDoesNotExist datFilePool -- if pool doesnt exist, just return the error
+          if datFilePool == (fst pageDoesNotExistError) || datFileDoesNotExist datFilePool -- if pool doesnt exist, just return the error
             then return pageDoesNotExistError -- this will return the error 13
-            else return $ mconcat [success, pool, n, processDatFile input datFilePool] -- prepend success to pool
-        else return $ mconcat [success, oyster, n, processDatFile input datFile] -- prepend success to oyster
+            else return $ (mconcat [success, pool, n, processDatFile input datFilePool], 200) -- prepend success to pool
+        else return $ (mconcat [success, oyster, n, processDatFile input datFile], 200) -- prepend success to oyster
      where
-      success = BL.pack "success"
-      oyster = BL.pack " - oyster"
+      success = BL.pack "Success"
+      oyster = BL.pack " Oyster"
       n = BL.pack "\n"
-      pool = BL.pack " - pool"
+      pool = BL.pack " Pool"
       statusExceptionHandler ::  HttpException -> IO BL.ByteString
-      statusExceptionHandler e = (putStrLn "404 Not Found") >> (return pageDoesNotExistError)
+      statusExceptionHandler e = (putStrLn "404 Not Found") >> toLog "error" (show currentTime ++ " 404") >> (return $ fst pageDoesNotExistError)
       oysterUrl = fromMaybe "" $ makeUrl "oyster"
       poolUrl = fromMaybe "" $ makeUrl "pool"
       getUrl url' = simpleHttp url' `X.catch` statusExceptionHandler
 
     userHash = snd . authenticate $ currentTime
+
 
   --processDatFile runs all the operations on the dat file for formatting
   -- dont forget to run the mosaic! (replaceDates)
@@ -474,11 +484,11 @@ getMsg input = do
   anInputError = fromMaybe False (error input)
 
 -- Errors. 
-inputError = BL.pack "Error 8008135"
-authenticationError = BL.pack "Error 69"
-urlError = BL.pack "Error 666"
-timeLimitError = BL.pack "Error 420"
-pageDoesNotExistError = BL.pack "Error 13"
+inputError = (BL.pack "Error 8008135", 404)
+authenticationError = (BL.pack "Error 69", 401)
+urlError = (BL.pack "Error 666", 400)
+timeLimitError = (BL.pack "Error 420", 401)
+pageDoesNotExistError = (BL.pack "Error 13", 404)
 
 {-- -- Alternative error messages
 inputError = BL.pack "404 Not Found - Please check input and try again"
