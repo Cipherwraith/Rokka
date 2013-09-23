@@ -1,7 +1,7 @@
 -- Name:          Rokka server
 -- Author:        CipherWraith
 -- Contact:       twitter.com/codemonkeyz
--- Last modified: Mon Sep 23 11:31:02 2013
+-- Last modified: Mon Sep 23 18:56:11 2013
 
 import Prelude hiding (error)
 
@@ -53,7 +53,7 @@ main = withSocketsDo $ do
 loop sock = do
   (h,x,z) <- accept sock
   currTime <- epochTime
-  rand <- randomRIO (100,9999999) :: IO Int
+  rand <- randomRIO (1000000,9999999) :: IO Int
   toLog "ip" $ mconcat [show currTime, " ", encryptT x rand]
   -- process one line at a time
   hSetBuffering h LineBuffering
@@ -69,16 +69,18 @@ body h = do
   --print $ "got header: \n" ++ headerGot
 
   -- get the $_GET data and put it into a data type
-  let getInput = parseHeader headerGot :: Header
+  let getInput = parseHeaderStream headerGot :: HeaderNew
   currTime <- epochTime
   --toLog "input" $ mconcat [show currTime, " ", show getInput] 
   --print getInput
 
   -- unescapes the decoded strings
-  let decoded = urlDecode getInput :: Header
+  --let decoded = urlDecode getInput :: Header
+  
+  toLog "ua" $ mconcat [show currTime, " ", (fromMaybe "" (userAgent getInput))]
 
   -- Parse the $_GET data, and figure out which board/post/server/sid the user is using
-  let input = parseInput decoded :: Input
+  let input = parseInput getInput :: Input
   print input -- print to terminal
   --toLog "parsed" $ mconcat [show currTime, " ", show input]
   
@@ -89,7 +91,7 @@ body h = do
 
   -- Check if the input asks for raw=0.0. If it does, then gzip the message
   -- returns True if the message is zipped, and False if not. Message is in the snd
-  let possiblyCompressedMessage = checkForGZip input msg :: (Bool, BL.ByteString)
+  let possiblyCompressedMessage = checkForGZip getInput msg :: (Bool, BL.ByteString)
 
   -- Check if the message is zipped or not
   let isItZipped = fst possiblyCompressedMessage
@@ -111,7 +113,12 @@ body h = do
   --toLog "debug" $ mconcat [show currTime, " Gzip: ", show isItZipped, " | Content length: ", show messageLength]
 
   -- Output the data to the user
-  BL.hPut h $ mconcat [outgoingHeader, msg'] -- debug details
+  -- Check if it is HEAD or not. If head, then dont output msg'.
+
+  if fromMaybe False (headOnly input) -- If just headers are requested
+    then BL.hPut h $ mconcat [outgoingHeader]  -- Then just output the header
+    else BL.hPut h $ mconcat [outgoingHeader, msg']  -- Otherwise output everything
+  -- debug details
   print h
   print $ "outputting data: " ++ (BL.unpack $ mconcat [outgoingHeader, msg'])
   
@@ -124,11 +131,10 @@ body h = do
       incomingHeader = BL.pack . getData. parseHeader 
 
 -- Check if the user asked for Raw=0.0 gzipped data. If so, then return data as gzip. otherwise just return plaintext
-checkForGZip :: Input -> BL.ByteString -> (Bool, BL.ByteString)
+checkForGZip :: HeaderNew -> BL.ByteString -> (Bool, BL.ByteString)
 checkForGZip input bString 
-  | (raw input) == Nothing = (False, bString) -- If raw input is nothing, then just return the bstring
-  | fromJust (raw input) == "raw=0.0" = (True, gzip bString) -- if input is raw=0.0, then gzip bstring
-  | otherwise = (False, bString) -- otherwise just return the bstring
+  | gzipFlag input == True = (True, gzip bString)
+  | otherwise = (False, bString)
  where
   gzip = compress
 
@@ -138,7 +144,7 @@ urlDecode = Header . unEscapeString . getData
 
 
 blankInput :: Input
-blankInput = Input Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+blankInput = Input Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 {--
     End options
@@ -160,11 +166,18 @@ blankInput = Input Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothi
 --    Sample Header data:
 --      /pele/hnews/123123123/l50&raw=0.0&sid=Monazilla/2.00:437576303V875807Q65482S5373415V0353657X819589B683935C83892l0684065u718984C13042Y073615439W33071V8555402N76303M0122748U5567915F128809I381065V6928103Q47334M0251341Y65808j5567915e7"
       
-parseInput :: Header -> Input
+parseInput :: HeaderNew -> Input
 parseInput input = if fst getServer && fst getBoard && fst getPost 
-                      then Input (snd getServer) (snd getBoard) (snd getPost) getRaw getSID (fst parseStartStop) (snd parseStartStop) getL getKeepFirst getRemoveFirst Nothing Nothing
-                      else Input Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just True) (Just "Server, board, or post were wrong")
+                      then Input (snd getServer) (snd getBoard) (snd getPost) getRaw getSID (fst parseStartStop) (snd parseStartStop) getL getKeepFirst getRemoveFirst Nothing Nothing checkIfHeadOnly
+                      else Input Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just True) (Just "Server, board, or post were wrong") Nothing
   where
+
+    -- Checks for the "HEAD" http flag.
+    checkIfHeadOnly
+      | length (requestQuery input) < 4 = Nothing
+      | take 4 (requestQuery input) == "HEAD" = Just True
+      | otherwise = Just False
+
     -- parse the data for the "l50" at the end of the post
     getL :: Maybe Int
     getL = if 'l' `elem` separateOptions -- if 'l' exists in the opts
@@ -280,7 +293,7 @@ parseInput input = if fst getServer && fst getBoard && fst getPost
       | otherwise = (True, Just (splitBySlashes !! 3))
 
     splitBySlashes = splitOn "/" inputData
-    inputData = concat . take 1 . drop 1 . splitOn " " . getData $ input :: String
+    inputData = concat . take 1 . drop 1 . splitOn " " . requestQuery $ input :: String
 
 -- Converts a string to Int. Make sure the string only contains numbers first!
 convertToInt x = read filtered :: Int
@@ -289,26 +302,6 @@ convertToInt x = read filtered :: Int
                   then filter isNumber x -- is number
                   else "0" -- is not number
                   
--- Parses the header sent by the user, looks for the GET data
-parseHeader :: String -> Header
-parseHeader  = (parseHead 1) . lines 
-  where
-    parseHead :: Int -> [String] -> Header
-    parseHead i [] = Header "asdf"
-    parseHead i (h:hs) 
-      | i > 100 = parseHead (i + 1) []
-      | take 3 h == "GET" =  checkForEnd 1 h hs
-      | otherwise =  parseHead (i + 1) hs
-
-    checkForEnd i headerGet [] = Header "asdf"
-    checkForEnd i headerGet (h:hs) 
-      | i > 100 =  Header "asdf"
-      | h == ("\r\n\r\n") =  Header headerGet
-      | h == ("\r\n") =  Header headerGet
-      | h == ("\r") =  Header headerGet
-      | h == ("\n") =  Header headerGet
-      | otherwise = checkForEnd (i + 1) headerGet hs
-
 {--
  -- Sample get data
        http://offlaw.bbspink.com/pele/hnews/123123123/l50&raw=0.0&sid=Monazilla/1.00:HCBCGCGCIDHCHEAC@GGDMDOF@CFCCDEGECEGBDDG@DBCGFGFDGFCHEBEHCBCGCGCAEFFLBNCBGAGHFAF@G@G@G@GDCACCCGCICFCGCGCNGBCHDNCFEDFEC@F@C@C@C@CCGGEJFODAGIDIFAG@CECBCHCHEJGDEDBHCACCCGC@CBCHCBCC
