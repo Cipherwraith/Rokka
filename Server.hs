@@ -1,9 +1,7 @@
 -- Name:          Rokka server
 -- Author:        CipherWraith
 -- Contact:       twitter.com/codemonkeyz
--- Last modified: Sat Sep 21 20:15:45 PHT 2013
-
-
+-- Last modified: Mon Sep 23 11:31:02 2013
 
 import Prelude hiding (error)
 
@@ -30,7 +28,6 @@ import Data.Maybe
 import System.Random
 import System.IO
 import System.Posix.Time
-import Debug.Trace
 
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -56,7 +53,7 @@ main = withSocketsDo $ do
 loop sock = do
   (h,x,z) <- accept sock
   currTime <- epochTime
-  rand <- randomRIO (1000000,9999999) :: IO Int
+  rand <- randomRIO (100,999) :: IO Int
   toLog "ip" $ mconcat [show currTime, " ", encryptT x rand]
   -- process one line at a time
   hSetBuffering h LineBuffering
@@ -66,14 +63,16 @@ loop sock = do
 
 -- Main logic loop
 body h = do
+  print "in body"
   -- Get the incoming header
   headerGot <- hGetContents h :: IO String
+  --print $ "got header: \n" ++ headerGot
 
   -- get the $_GET data and put it into a data type
   let getInput = parseHeader headerGot :: Header
   currTime <- epochTime
-  toLog "input" $ mconcat [show currTime, " ", show getInput] 
-  print getInput
+  --toLog "input" $ mconcat [show currTime, " ", show getInput] 
+  --print getInput
 
   -- unescapes the decoded strings
   let decoded = urlDecode getInput :: Header
@@ -81,10 +80,12 @@ body h = do
   -- Parse the $_GET data, and figure out which board/post/server/sid the user is using
   let input = parseInput decoded :: Input
   print input -- print to terminal
-  toLog "parsed" $ mconcat [show currTime, " ", show input]
+  --toLog "parsed" $ mconcat [show currTime, " ", show input]
   
   -- Create the outgoing message with input 
   (msg, code) <- getMsg input :: IO (BL.ByteString, Int)
+
+  print $ "got message: " ++ (BL.unpack msg)
 
   -- Check if the input asks for raw=0.0. If it does, then gzip the message
   -- returns True if the message is zipped, and False if not. Message is in the snd
@@ -95,23 +96,29 @@ body h = do
 
   -- Get the message into a new variable
   let msg' = snd possiblyCompressedMessage
+  print $ "message compressed? " ++ (show $ fst possiblyCompressedMessage)
 
   -- Get the length of the message:
   let messageLength = BL.length msg' 
+  print "got message length"
 
   -- Build the outgoing header
   let outgoingHeader = buildHeader code isItZipped messageLength :: BL.ByteString
-  toLog "headers" $ mconcat [show currTime, BL.unpack outgoingHeader]
+  --toLog "headers" $ mconcat [show currTime, BL.unpack outgoingHeader]
+  print $ "outgoing header built: " ++ (BL.unpack outgoingHeader)
 
   -- For debug
-  toLog "debug" $ mconcat [show currTime, " Gzip: ", show isItZipped, " | Content length: ", show messageLength]
+  --toLog "debug" $ mconcat [show currTime, " Gzip: ", show isItZipped, " | Content length: ", show messageLength]
 
   -- Output the data to the user
   BL.hPut h $ mconcat [outgoingHeader, msg'] -- debug details
+  print h
+  print $ "outputting data: " ++ (BL.unpack $ mconcat [outgoingHeader, msg'])
   
   -- Clear the handle, and close it
   hFlush h
   hClose h
+  print "handle closed"
     where
       -- Gets the header sent by the user
       incomingHeader = BL.pack . getData. parseHeader 
@@ -284,18 +291,23 @@ convertToInt x = read filtered :: Int
                   
 -- Parses the header sent by the user, looks for the GET data
 parseHeader :: String -> Header
-parseHeader = parseHead . lines 
+parseHeader  = (parseHead 1) . lines 
   where
-    parseHead :: [String] -> Header
-    parseHead [] = Header "asdf"
-    parseHead (h:hs) = if take 3 h == "GET"
-                          then checkForEnd h hs
-                          else parseHead hs
-    checkForEnd headerGet [] = Header "asdf"
-    checkForEnd headerGet (h:hs) 
-      | h == ("\r\n\r\n") = Header h
-      | h == ("\r\n") = Header h
-      | otherwise = checkForEnd headerGet hs
+    parseHead :: Int -> [String] -> Header
+    parseHead i [] = Header "asdf"
+    parseHead i (h:hs) 
+      | i > 100 = parseHead (i + 1) []
+      | take 3 h == "GET" =  checkForEnd 1 h hs
+      | otherwise =  parseHead (i + 1) hs
+
+    checkForEnd i headerGet [] = Header "asdf"
+    checkForEnd i headerGet (h:hs) 
+      | i > 100 =  Header "asdf"
+      | h == ("\r\n\r\n") =  Header headerGet
+      | h == ("\r\n") =  Header headerGet
+      | h == ("\r") =  Header headerGet
+      | h == ("\n") =  Header headerGet
+      | otherwise = checkForEnd (i + 1) headerGet hs
 
 {--
  -- Sample get data
@@ -378,7 +390,10 @@ buildUrl poolOrOyster serverN boardN postN
     --http://banana3000.maido3.com/~ch2live20/vault/
     -- banana3000.maido3.com/<server>/vault/<board>/oyster/<first four>/<dat>.dat
     urlStyle6 :: String
-    urlStyle6 = mconcat ["http://banana3000.maido3.com/", fromJust serverName2ch, "/vault/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
+    --urlStyle6 = mconcat ["http://banana3000.maido3.com/", fromJust serverName2ch, "/vault/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
+    -- new style: 
+    -- http://human7.hanako.2ch.net/vault/nohodame/oyster/1057/1057605617.dat
+    urlStyle6 = mconcat ["http://", fromJust serverN, ".hanako.2ch.net/vault/", fromJust boardN, "/oyster/", postFirstFour, "/", fromJust postN, ".dat"]
 
     -- Check if pool or oyster. If it is oyster, then append the post's first four dat numbers.
     checkForPool 
@@ -447,10 +462,10 @@ getMsg input = do
       print $ userHash ++ " is authenticated"-- user is authenticated, continue and download the page
       datFile <- getUrl oysterUrl
       addUserToTimer userHash -- add the user's hash to the dat timer
-      if datFile == (fst pageDoesNotExistError) || datFileDoesNotExist datFile
+      if datFile == (fst pageDoesNotExistError) || datFileExistence datFile
         then do
           datFilePool <- getUrl poolUrl -- check if pool exists or not
-          if datFilePool == (fst pageDoesNotExistError) || datFileDoesNotExist datFilePool -- if pool doesnt exist, just return the error
+          if datFilePool == (fst pageDoesNotExistError) || datFileExistence datFilePool -- if pool doesnt exist, just return the error
             then return pageDoesNotExistError -- this will return the error 13
             else return $ (mconcat [success, pool, n, processDatFile input datFilePool], 200) -- prepend success to pool
         else return $ (mconcat [success, oyster, n, processDatFile input datFile], 200) -- prepend success to oyster
@@ -475,7 +490,7 @@ getMsg input = do
   -- if not authenticated then bool is false, and the string is just ""
   -- The integer sent to authenticate is the currentTime
   authenticate :: Integer -> (Bool, String)
-  authenticate = authenticateUser input -- Crypto related
+  authenticate =  authenticateUser input -- Crypto related
 
   -- Example:
   -- sid = Just "sid=Monazilla/2.00:437576303V875807Q65482S5373415V0353657X819589B683935C83892l0684065u718984C13042Y073615439W33071V8555402N76303M0122748U5567915F128809I381065V6928103Q47334M0251341Y65808j5567915e7"
