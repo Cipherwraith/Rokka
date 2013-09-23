@@ -28,6 +28,7 @@ import Data.Maybe
 import System.Random
 import System.IO
 import System.Posix.Time
+import System.Directory
 
 import qualified Data.Set as S
 import qualified Data.Map as M
@@ -48,6 +49,7 @@ import Search
 main = withSocketsDo $ do
   sock <- listenOn $ PortNumber 80
   print "Welcome to the inside of the vault"
+  mapM_ checkPaths directoriesToCheck
   loop sock
 
 loop sock = do
@@ -70,6 +72,8 @@ body h = do
 
   -- get the $_GET data and put it into a data type
   let getInput = parseHeaderStream headerGot :: HeaderNew
+  print "got headers!"
+  print getInput
   currTime <- epochTime
   --toLog "input" $ mconcat [show currTime, " ", show getInput] 
   --print getInput
@@ -77,7 +81,7 @@ body h = do
   -- unescapes the decoded strings
   --let decoded = urlDecode getInput :: Header
   
-  toLog "ua" $ mconcat [show currTime, " ", (fromMaybe "" (userAgent getInput))]
+  forkIO $ toLog "ua" $ mconcat [show currTime, " ", (fromMaybe "" (userAgent getInput))]
 
   -- Parse the $_GET data, and figure out which board/post/server/sid the user is using
   let input = parseInput getInput :: Input
@@ -505,4 +509,13 @@ authenticationError = BL.pack "401 Unauthorized - Authentication Error"
 urlError = BL.pack "400 Bad Request - Check URL and try again"
 timeLimitError = BL.pack "401 Unauthorized - Request Limit Reached, please wait and try again"
 --}
+
+checkPaths x = do
+  existence <- doesDirectoryExist x
+  if existence
+    then return ()
+    else do
+      createDirectoryIfMissing True x
+      return ()
+
 
