@@ -1,7 +1,7 @@
 -- Name:          Rokka server
 -- Author:        CipherWraith
 -- Contact:       twitter.com/codemonkeyz
--- Last modified: Mon Sep 23 18:56:11 2013
+-- Last modified: Tue Sep 24 13:45:51 2013
 
 import Prelude hiding (error)
 
@@ -45,6 +45,7 @@ import Logger
 import Mosaic
 import ChanBoards
 import Search
+import GetHeaders
 
 main = withSocketsDo $ do
   sock <- listenOn $ PortNumber 80
@@ -55,8 +56,8 @@ main = withSocketsDo $ do
 loop sock = do
   (h,x,z) <- accept sock
   currTime <- epochTime
-  rand <- randomRIO (1000000,9999999) :: IO Int
-  toLog "ip" $ mconcat [show currTime, " ", encryptT x rand]
+  rand <- randomRIO (100,999) :: IO Int
+  forkIO $ toLog "ip" $ mconcat [show currTime, " ", encryptT x rand]
   -- process one line at a time
   hSetBuffering h LineBuffering
   print (h,x,z)
@@ -89,7 +90,7 @@ body h = do
   --toLog "parsed" $ mconcat [show currTime, " ", show input]
   
   -- Create the outgoing message with input 
-  (msg, code) <- getMsg input :: IO (BL.ByteString, Int)
+  (msg, code, lmodified) <- getMsg input :: IO (BL.ByteString, Int, String)
 
   print $ "got message: " ++ (BL.unpack msg)
 
@@ -107,9 +108,13 @@ body h = do
   -- Get the length of the message:
   let messageLength = BL.length msg' 
   print "got message length"
+  
+  -- Get the last modified date of the file:
+  let lastModified = lmodified 
+  print "got last modified"
 
   -- Build the outgoing header
-  let outgoingHeader = buildHeader code isItZipped messageLength :: BL.ByteString
+  let outgoingHeader = buildHeader code isItZipped messageLength lastModified :: BL.ByteString
   --toLog "headers" $ mconcat [show currTime, BL.unpack outgoingHeader]
   print $ "outgoing header built: " ++ (BL.unpack outgoingHeader)
 
@@ -426,7 +431,7 @@ buildUrl poolOrOyster serverN boardN postN
 
 
 -- Download the dat file from the server.
-getMsg :: Input -> IO (BL.ByteString, Int)
+getMsg :: Input -> IO (BL.ByteString, Int, String)
 getMsg input = do
   -- get the current time for authorization purposes
   getCurrentTime <- epochTime
@@ -439,7 +444,7 @@ getMsg input = do
   makeUrl poolOrOyster = buildUrl poolOrOyster (server input) (board input) (post input)
 
   -- Check for errors, if no error, then download and return dat file
-  authenticationLogic :: Integer -> IO (BL.ByteString, Int)
+  authenticationLogic :: Integer -> IO (BL.ByteString, Int, String)
   authenticationLogic currentTime
     | anInputError = return inputError
     | not . fst $ authenticate currentTime = return authenticationError
@@ -454,28 +459,33 @@ getMsg input = do
     -- Download the dat file and return it
     -- It first checks oyster. If oyster returns 404 not found, then it will check pool. If pool also returns 404 not found,
     -- then it prints "Error 13"
-    downloadAndReturnDatFile :: IO (BL.ByteString, Int)
+    downloadAndReturnDatFile :: IO (BL.ByteString, Int, String)
     downloadAndReturnDatFile = do
       print $ userHash ++ " is authenticated"-- user is authenticated, continue and download the page
       datFile <- getUrl oysterUrl
       addUserToTimer userHash -- add the user's hash to the dat timer
-      if datFile == (fst pageDoesNotExistError) || datFileExistence datFile
+      if datFile == (fst' pageDoesNotExistError) || datFileExistence datFile
         then do
           datFilePool <- getUrl poolUrl -- check if pool exists or not
-          if datFilePool == (fst pageDoesNotExistError) || datFileExistence datFilePool -- if pool doesnt exist, just return the error
+          if datFilePool == (fst' pageDoesNotExistError) || datFileExistence datFilePool -- if pool doesnt exist, just return the error
             then return pageDoesNotExistError -- this will return the error 13
-            else return $ (mconcat [success, pool, n, processDatFile input datFilePool], 200) -- prepend success to pool
-        else return $ (mconcat [success, oyster, n, processDatFile input datFile], 200) -- prepend success to oyster
+            else do
+              lModified <- lastModified poolUrl
+              return $ (mconcat [success, pool, n, processDatFile input datFilePool], 200, lModified) -- prepend success to pool
+        else do
+            lModified <- lastModified oysterUrl
+            return $ (mconcat [success, oyster, n, processDatFile input datFile], 200, lModified) -- prepend success to oyster
      where
       success = BL.pack "Success"
       oyster = BL.pack " Oyster"
       n = BL.pack "\n"
       pool = BL.pack " Pool"
       statusExceptionHandler ::  HttpException -> IO BL.ByteString
-      statusExceptionHandler e = (putStrLn "404 Not Found") >> toLog "error" (show currentTime ++ " 404") >> (return $ fst pageDoesNotExistError)
+      statusExceptionHandler e = (putStrLn "404 Not Found") >> {-- toLog "error" (show currentTime ++ " 404") >> --} (return $ fst' pageDoesNotExistError)
       oysterUrl = fromMaybe "" $ makeUrl "oyster"
       poolUrl = fromMaybe "" $ makeUrl "pool"
       getUrl url' = simpleHttp url' `X.catch` statusExceptionHandler
+      lastModified url' = getLastModified url'
 
     userHash = snd . authenticate $ currentTime
 
@@ -497,11 +507,11 @@ getMsg input = do
   anInputError = fromMaybe False (error input)
 
 -- Errors. 
-inputError = (BL.pack "Error 8008135", 404)
-authenticationError = (BL.pack "Error 69", 401)
-urlError = (BL.pack "Error 666", 400)
-timeLimitError = (BL.pack "Error 420", 401)
-pageDoesNotExistError = (BL.pack "Error 13", 404)
+inputError = (BL.pack "Error 8008135", 404, "")
+authenticationError = (BL.pack "Error 69", 401, "")
+urlError = (BL.pack "Error 666", 400, "")
+timeLimitError = (BL.pack "Error 420", 401, "")
+pageDoesNotExistError = (BL.pack "Error 13", 404, "")
 
 {-- -- Alternative error messages
 inputError = BL.pack "404 Not Found - Please check input and try again"
@@ -509,6 +519,10 @@ authenticationError = BL.pack "401 Unauthorized - Authentication Error"
 urlError = BL.pack "400 Bad Request - Check URL and try again"
 timeLimitError = BL.pack "401 Unauthorized - Request Limit Reached, please wait and try again"
 --}
+
+fst' (x,_,_) = x
+snd' (_,y,_) = y
+thd' (_,_,z) = z
 
 checkPaths x = do
   existence <- doesDirectoryExist x
