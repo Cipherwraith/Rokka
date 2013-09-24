@@ -5,26 +5,30 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Int
 import Types
 import Network.URI
+import Data.Char
 
 -- Outgoing headers:
 --
 messageLength = 10
 isItZipped = True
 
-buildHeader :: Int -> Bool -> Int64 -> BL.ByteString
-buildHeader code isItZipped messageLength = header code isItZipped messageLength  
+buildHeader :: Int -> Bool -> Int64 -> String -> BL.ByteString
+buildHeader code isItZipped messageLength lastModified = header code isItZipped messageLength lastModified
 
 -- Build a header with correct content length
-header :: Int -> Bool -> Int64 -> BL.ByteString
-header code isItZipped messageLength
-  | isItZipped = mconcat [ status, plainText, contentLength, mLength, gzipped, endHeader ]
-  | otherwise = mconcat [ status, plainText, contentLength, mLength, endHeader ]
+header :: Int -> Bool -> Int64 -> String -> BL.ByteString
+header code isItZipped messageLength lastModified
+  | isItZipped = mconcat [ status, plainText, contentLength, mLength, modified, gzipped, endHeader ]
+  | otherwise = mconcat [ status, plainText, contentLength, mLength, modified, endHeader ]
   where
     status = statusCode code
     contentLength = BL.pack "\r\nContent-Length: "
     mLength = BL.pack . show $ messageLength
     gzipped = BL.pack "\r\nContent-Encoding: gzip"
     plainText = BL.pack "\r\nContent-Type: text/plain; charset=\"Shift_JIS\""
+    modified = if lastModified == "" 
+                  then BL.pack ""
+                  else BL.pack ("\r\nLast-Modified: " ++ lastModified)
     endHeader = BL.pack "\r\n\r\n"
 
 statusCode :: Int -> BL.ByteString
@@ -113,10 +117,24 @@ parseRequestQuery (x:xs)
 parseGzipFlag :: [String] -> Bool
 parseGzipFlag [] = False
 parseGzipFlag (x:xs) 
-  | "Accept-Encoding:" `elem` s && "gzip" `elem` s = True
+  | "Accept-Encoding:" `elem` s = checkForGzip x 
   | otherwise = parseGzipFlag xs
  where
+  -- split x into words 
   s = words x
+  -- checks if gzip is an element in y
+  checkForGzip x = "gzip" `elem` y 
+    where
+      -- remove commas, then make everything lowercase, and finally split by word
+      y = words . map toLower $ removeCommas x ""
+
+      -- recursive function to remove commas and replace them with a space
+      removeCommas [] s = reverse s
+      removeCommas (z:zs) s
+        | z == ',' = removeCommas zs (' ' : s)
+        | otherwise = removeCommas zs (z:s) 
+      
+
 
 parseUserAgent :: [String] -> Maybe String
 parseUserAgent [] = Nothing
@@ -140,6 +158,7 @@ headerStream headerIn = getHeaderStream (lines $ headerIn) [] 0
     getHeaderStream [] m _ = m
     getHeaderStream (h:hs) m i 
       | i > 50 = m
+      | h == "\r" = (h:m)
       | otherwise = getHeaderStream hs (h:m) i
 
 
