@@ -64,27 +64,6 @@ checkForEnd i headerGet (h:hs)
   | h == ("\n") =  Header headerGet
   | otherwise = checkForEnd (i + 1) headerGet hs
 
-{--
-parseHeaderNew :: String -> HeaderNew
-parseHeaderNew  = (parseHeadNew 1) . lines
-  where
-  parseHeadNew :: Int -> [String] -> HeaderNew
-  parseHeadNew i [] = HeaderNew "meow"
-  parseHeadNew i (h:hs)
-    | i > 100 = parseHeadNew (i + 1) []
-    | take 3 h == "GET" =  checkForEndNew 1 h hs
-    | otherwise =  parseHeadNew (i + 1) hs
-
-checkForEndNew i headerGetNew [] = HeaderNew "asdf"
-checkForEndNew i headerGetNew (h:hs)
-  | i > 100 =  HeaderNew "lulz"
-  | h == ("\r\n\r\n") =  HeaderNew headerGetNew
-  | h == ("\r\n") =  HeaderNew headerGetNew
-  | h == ("\r") =  HeaderNew headerGetNew
-  | h == ("\n") =  HeaderNew headerGetNew
-  | otherwise = checkForEndNew (i + 1) headerGetNew hs
---}
-
 
 parseHeaderStream headerIn = HeaderNew getRequestQuery getGzipFlag getUserAgent getDoesItEnd
   where
