@@ -117,23 +117,23 @@ parseRequestQuery (x:xs)
 parseGzipFlag :: [String] -> Bool
 parseGzipFlag [] = False
 parseGzipFlag (x:xs) 
-  | "Accept-Encoding:" `elem` s = checkForGzip x 
+  | ("accept-encoding" `elem` s) && ("gzip" `elem` s) = True
   | otherwise = parseGzipFlag xs
  where
-  -- split x into words 
-  s = words x
-  -- checks if gzip is an element in y
-  checkForGzip x = "gzip" `elem` y 
-    where
-      -- remove commas, then make everything lowercase, and finally split by word
-      y = words . map toLower $ removeCommas x ""
+    -- remove commas, then make everything lowercase, and finally split by word
+    s = words $ removePunctuation trimmed ""
 
-      -- recursive function to remove commas and replace them with a space
-      removeCommas [] s = reverse s
-      removeCommas (z:zs) s
-        | z == ',' = removeCommas zs (' ' : s)
-        | otherwise = removeCommas zs (z:s) 
-      
+    -- take only 100 chars to be parsed
+    trimmed = take 100 x
+
+    -- recursive function to remove punctuation and replace them with a space
+    removePunctuation [] s = reverse s
+    removePunctuation (z:zs) s
+      | z == ',' = removePunctuation zs (' ' : s)
+      | z == ';' = removePunctuation zs (' ' : s)
+      | z == ':' = removePunctuation zs (' ' : s)
+      | otherwise = removePunctuation zs ((toLower z):s) 
+    
 
 
 parseUserAgent :: [String] -> Maybe String
