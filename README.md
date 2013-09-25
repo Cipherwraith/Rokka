@@ -2,7 +2,7 @@ Rokka
 =====
 
 
-    Rokkaシステム仕様書 Ver. 2013/09/25 12JST　Copyright (c) N.T. Technology, Inc. (GPL V2 License)
+    Rokkaシステム仕様書 Ver. 2013/09/26 01JST　Copyright (c) N.T. Technology, Inc. (GPL V2 License)
      
     Rokkaシステムは２ちゃん/BBSPINKのDAT落ちログを取得する新しい方法です。
      
@@ -68,6 +68,8 @@ Rokka
     　　1時間に600スレまで
     　この制限値以上スレを取得しようとするとError 420が返ってきます。
      
+    注:
+    　HTTP GETとHEADのメソッドのみ有効です。それ以外のHTTPメソッドには応答しません。
      
     ソースコード:
     https://github.com/Cipherwraith/Rokka
@@ -82,7 +84,7 @@ Rokka
     　　　　　　
     　　　　　　	
 
-    Rokka System Specification Ver. 2013/09/25 12JST　Copyright (c) N.T. Technology, Inc. (GPL V2 License)
+    Rokka System Specification Ver. 2013/09/26 01JST　Copyright (c) N.T. Technology, Inc. (GPL V2 License)
      
     Rokka System is the new method to get 2ch/bbspink archived dats.
      
@@ -150,6 +152,9 @@ Rokka
     　　600 dats within 1 hour
     　When you try to get more dats over the limitation, you will get Error 420.
      
+    Note:
+    　HTTP GET and HEAD can be responsible. Any other HTTP methods will never been responded.
+
      
     Source Code:
     https://github.com/Cipherwraith/Rokka
