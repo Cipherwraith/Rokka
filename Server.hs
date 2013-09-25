@@ -375,7 +375,7 @@ buildUrl poolOrOyster serverN boardN postN
       | otherwise = urlStyle6
 
     urlStyle1 :: String
-    urlStyle1 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
+    urlStyle1 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/_datArea/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
     
     urlStyle2 :: String
     urlStyle2 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/", postFirstFour, "/", postFirstFive, "/", fromJust postN, ".dat.gz"]
