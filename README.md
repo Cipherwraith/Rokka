@@ -1,7 +1,86 @@
 Rokka
 =====
 
-	
+
+    Rokkaシステム仕様書 Ver. 2013/09/25 12JST　Copyright (c) N.T. Technology, Inc. (GPL V2 License)
+     
+    Rokkaシステムは２ちゃん/BBSPINKのDAT落ちログを取得する新しい方法です。
+     
+    Rokkaからは以下のdatログを取得する事ができます：
+    　２ちゃん過去ログ
+    　bbspink過去ログ
+    　２ちゃんdat落ちログ
+    　bbspink dat落ちログ
+    　２ちゃんライブスレッド
+    　bbspinkライブスレッド
+     
+    注:
+    　ライブスレッド - subject.txtに載っていて書き込み可能なスレッド
+    　dat落ちスレッド - subject.txtに載っていなく書き込み不可能なスレッド、じきに過去ログ化されます
+    　過去ログ - 板移転前からのログを蓄積したものです　一部失われているものもあります
+     
+     
+    KAGI
+    Rokkaからdatを取得するには「KAGI」を認証サーバーより取得する必要があります。
+     
+    　https://2chv.tora3.net/futen.cgi?ID=<User ID>&PW=<Password>
+     
+    認証に成功すると以下のようなKAGIが取得できます。
+    Monazilla/2.00:4373298c8948y4671g4635r53615D4699f4014I3455C9148A6600f2811s45242k42852u6725y95346g6820L6383H0297o62124l2450n64672G6826N2472L7957N2508x9686O8904U4108793x6855v1216b1499s6811a2729r
+     
+     
+    datの取得
+    取得したKAGIを使ってRokkaからdatを取得します。
+     
+    　http://rokka.<DOMAIN>/<SERVER>/<BOARD>/<THREAD>/[<OPTIONS>]?sid=<KAGI>
+     
+    　DOMAIN : 2ch.net または bbspink.com
+    　SERVER : サーバー名, pele,kilauea,...(bbspink)　anago,awabi,....(2ch)
+    　BOARD : スレッド名, news,entrance,.....
+    　THREAD : スレッドキー
+    　OPTIONS : ２ちゃんの標準URLオプションです, l50 , 25-35 , -45 , 13- , etc...
+    　　　　　　範囲外の指定だった場合スレッド全体が返ります
+    　<KAGI> : 取得したKAGIです　URLエンコード推奨
+     
+    　レスポンス : 1行目にrokkaの処理結果が記述されます
+    　　"Success XXX"　- 成功　XXXにdatの状態（取得元）が記述されます
+    　　　　　　　　　　　Live　　　　ライブスレッド
+    　　　　　　　　　　　Pool　　　　dat落ちスレッド
+    　　　　　　　　　　　Archive 　　過去ログ
+    　　　　　　　　　　 以降の行にDAT形式(name<>email<>datetime<>body<>[title])でログが記述されています
+    　　"Error XXX"　　- 何らかのエラーです　XXX がエラーコードです。
+    　　　　　　　　　　　13 　　　not found　　　　　　要求されたdatが見つかりませんでした
+    　　　　　　　　　　　8008135　inputError 　　　　　リクエストURLのSERVERかBOARDかTHREADが正しくないです
+    　　　　　　　　　　　666　　　urlError 　　　　　　OPTIONSが正しくないです
+    　　　　　　　　　　　69 　　　authenticationError　KAGIが不正（有効期限切れその他）
+    　　　　　　　　　　　420　　　timeLimitError 　　　アクセス間隔が短すぎます
+     
+    HTTPステータスコード（404,200など）もHTTPレスポンスヘッダに同時に返します。
+     
+    HTTPリクエストヘッダーにAccept-Encoding:gzipを含めるとレスポンスをGZipで返します。
+     
+    注:
+    　エラーError 420について
+    　クローラー対策のため1秒あたり、1分あたり、1時間あたりの合計取得数には制限があり、これを過ぎるとこのエラーが返ります。
+    　制限値は以下の通りです。
+    　　1秒間に10スレまで
+    　　1分間に60スレまで
+    　　1時間に600スレまで
+    　この制限値以上スレを取得しようとするとError 420が返ってきます。
+     
+     
+    ソースコード:
+    https://github.com/Cipherwraith/Rokka
+     
+    議論スレ:
+    Rokka System
+    http://pele.bbspink.com/test/read.cgi/erobbs/1379086553/
+     
+    2013/09/25 Code Monkey @ N.T. Technology, Inc.
+    　　　　　　翻訳　水玉(Mizutama) ◆qHK1vdR8FRIm
+    　　　　　　
+    　　　　　　
+    　　　　　　	
 
     Rokka System Specification Ver. 2013/09/25 12JST　Copyright (c) N.T. Technology, Inc. (GPL V2 License)
      
@@ -84,81 +163,5 @@ Rokka
      
      
      
-    Rokkaシステム仕様書 Ver. 2013/09/25 12JST　Copyright (c) N.T. Technology, Inc. (GPL V2 License)
-     
-    Rokkaシステムは２ちゃん/BBSPINKのDAT落ちログを取得する新しい方法です。
-     
-    Rokkaからは以下のdatログを取得する事ができます：
-    　２ちゃん過去ログ
-    　bbspink過去ログ
-    　２ちゃんdat落ちログ
-    　bbspink dat落ちログ
-    　２ちゃんライブスレッド
-    　bbspinkライブスレッド
-     
-    注:
-    　ライブスレッド - subject.txtに載っていて書き込み可能なスレッド
-    　dat落ちスレッド - subject.txtに載っていなく書き込み不可能なスレッド、じきに過去ログ化されます
-    　過去ログ - 板移転前からのログを蓄積したものです　一部失われているものもあります
-     
-     
-    KAGI
-    Rokkaからdatを取得するには「KAGI」を認証サーバーより取得する必要があります。
-     
-    　https://2chv.tora3.net/futen.cgi?ID=<User ID>&PW=<Password>
-     
-    認証に成功すると以下のようなKAGIが取得できます。
-    Monazilla/2.00:4373298c8948y4671g4635r53615D4699f4014I3455C9148A6600f2811s45242k42852u6725y95346g6820L6383H0297o62124l2450n64672G6826N2472L7957N2508x9686O8904U4108793x6855v1216b1499s6811a2729r
-     
-     
-    datの取得
-    取得したKAGIを使ってRokkaからdatを取得します。
-     
-    　http://rokka.<DOMAIN>/<SERVER>/<BOARD>/<THREAD>/[<OPTIONS>]?sid=<KAGI>
-     
-    　DOMAIN : 2ch.net または bbspink.com
-    　SERVER : サーバー名, pele,kilauea,...(bbspink)　anago,awabi,....(2ch)
-    　BOARD : スレッド名, news,entrance,.....
-    　THREAD : スレッドキー
-    　OPTIONS : ２ちゃんの標準URLオプションです, l50 , 25-35 , -45 , 13- , etc...
-    　　　　　　範囲外の指定だった場合スレッド全体が返ります
-    　<KAGI> : 取得したKAGIです　URLエンコード推奨
-     
-    　レスポンス : 1行目にrokkaの処理結果が記述されます
-    　　"Success XXX"　- 成功　XXXにdatの状態（取得元）が記述されます
-    　　　　　　　　　　　Live　　　　ライブスレッド
-    　　　　　　　　　　　Pool　　　　dat落ちスレッド
-    　　　　　　　　　　　Archive 　　過去ログ
-    　　　　　　　　　　 以降の行にDAT形式(name<>email<>datetime<>body<>[title])でログが記述されています
-    　　"Error XXX"　　- 何らかのエラーです　XXX がエラーコードです。
-    　　　　　　　　　　　13 　　　not found　　　　　　要求されたdatが見つかりませんでした
-    　　　　　　　　　　　8008135　inputError 　　　　　リクエストURLのSERVERかBOARDかTHREADが正しくないです
-    　　　　　　　　　　　666　　　urlError 　　　　　　OPTIONSが正しくないです
-    　　　　　　　　　　　69 　　　authenticationError　KAGIが不正（有効期限切れその他）
-    　　　　　　　　　　　420　　　timeLimitError 　　　アクセス間隔が短すぎます
-     
-    HTTPステータスコード（404,200など）もHTTPレスポンスヘッダに同時に返します。
-     
-    HTTPリクエストヘッダーにAccept-Encoding:gzipを含めるとレスポンスをGZipで返します。
-     
-    注:
-    　エラーError 420について
-    　クローラー対策のため1秒あたり、1分あたり、1時間あたりの合計取得数には制限があり、これを過ぎるとこのエラーが返ります。
-    　制限値は以下の通りです。
-    　　1秒間に10スレまで
-    　　1分間に60スレまで
-    　　1時間に600スレまで
-    　この制限値以上スレを取得しようとするとError 420が返ってきます。
-     
-     
-    ソースコード:
-    https://github.com/Cipherwraith/Rokka
-     
-    議論スレ:
-    Rokka System
-    http://pele.bbspink.com/test/read.cgi/erobbs/1379086553/
-     
-    2013/09/25 Code Monkey @ N.T. Technology, Inc.
-    　　　　　　翻訳　水玉(Mizutama) ◆qHK1vdR8FRIm
 
 
