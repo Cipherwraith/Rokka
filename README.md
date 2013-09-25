@@ -3,7 +3,7 @@ Rokka
 
 	
 
-    Rokka System Specification Ver. 2013/09/25 12JST　Copyright (c) N.T. Technology, Inc.
+    Rokka System Specification Ver. 2013/09/25 12JST　Copyright (c) N.T. Technology, Inc. (GPL V2 License)
      
     Rokka System is the new method to get 2ch/bbspink archived dats.
      
@@ -84,7 +84,7 @@ Rokka
      
      
      
-    Rokkaシステム仕様書 Ver. 2013/09/25 12JST　Copyright (c) N.T. Technology, Inc.
+    Rokkaシステム仕様書 Ver. 2013/09/25 12JST　Copyright (c) N.T. Technology, Inc. (GPL V2 License)
      
     Rokkaシステムは２ちゃん/BBSPINKのDAT落ちログを取得する新しい方法です。
      
