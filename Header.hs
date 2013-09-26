@@ -64,15 +64,14 @@ checkForEnd i headerGet (h:hs)
   | h == ("\n") =  Header headerGet
   | otherwise = checkForEnd (i + 1) headerGet hs
 
-
 parseHeaderStream headerIn = HeaderNew getRequestQuery getGzipFlag getUserAgent getDoesItEnd
   where
     stream :: [String]
     stream = headerStream headerIn
 
     -- Escape the Url Encoding also!
-    getRequestQuery :: String
-    getRequestQuery = unEscapeString $ parseRequestQuery stream 
+    getRequestQuery :: (String, String)
+    getRequestQuery = parseRequestQuery stream 
 
     getGzipFlag  :: Bool
     getGzipFlag = parseGzipFlag stream
@@ -84,14 +83,24 @@ parseHeaderStream headerIn = HeaderNew getRequestQuery getGzipFlag getUserAgent 
     getDoesItEnd = parseDoesItEnd stream
 
 
-parseRequestQuery :: [String] -> String
-parseRequestQury [] = "asdf"
+parseRequestQuery :: [String] -> (String, String)
+parseRequestQuery [] = ("asdf", "asdf")
 parseRequestQuery (x:xs) 
-  | "GET" `elem` s = x 
-  | "HEAD" `elem` s = x
+  | length (words x) < 1 = parseRequestQuery xs
+  | "GET" == s = (s, unEscapeString x)
+  | "HEAD" == s = (s, unEscapeString x)
+  | "POST" == s = (s, unEscapeString x)
+  | "PUT" == s = (s, unEscapeString x)
+  | "DELETE" == s = (s, unEscapeString x)
+  | "TRACE" == s = (s, unEscapeString x)
+  | "CONNECT" == s = (s, unEscapeString x)
   | otherwise = parseRequestQuery xs
  where
-  s = take 1 . words $ x
+  s = head $ words x
+
+methods :: [String]
+methods = ["GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"]
+
 
 parseGzipFlag :: [String] -> Bool
 parseGzipFlag [] = False
