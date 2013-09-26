@@ -5,7 +5,7 @@ data Header = Header {
 } deriving (Show)
 
 data HeaderNew = HeaderNew {
-  requestQuery :: String,
+  requestQuery :: (String,String),  -- (Method, Full query)
   gzipFlag     :: Bool,
   userAgent    :: Maybe String,
   doesItEnd    :: Bool
@@ -23,7 +23,8 @@ data Input = Input {
   keepFirst     :: Maybe Bool,
   remFirst      :: Maybe Bool,
   error         :: Maybe Bool,
-  errorMessage  :: Maybe String,
-  headOnly      :: Maybe Bool
+  errorMessage  :: Maybe String
+  --headOnly      :: Maybe Bool,
+  --isItGet       :: Maybe Bool
 } deriving (Show)
 
