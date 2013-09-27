@@ -5,6 +5,7 @@ import Data.Monoid
 import Data.Maybe
 import qualified Data.Map as M
 import ChanBoards
+import Debug.Trace
 
 -- Build the url to download the post dat. Need the serverName, boardName, and postNumber to start.
 buildUrl :: String -> Maybe String -> Maybe String -> Maybe String -> Maybe String
@@ -28,34 +29,36 @@ buildUrl poolOrOyster serverN boardN postN
 
     checkUrlStyle :: String
     checkUrlStyle
-      | fromJust serverN `elem` serverStyle1 = urlStyle1
-      | fromJust serverN `elem` serverStyle2 = urlStyle2
-      | fromJust serverN `elem` serverStyle3 = urlStyle3
-      | fromJust serverN `elem` serverStyle4 = urlStyle4
-      | fromJust serverN `elem` serverStyle5 = urlStyle5
-      | otherwise = urlStyle6
+      | fromJust serverN `elem` serverStyle1 = trace (urlStyle1) urlStyle1
+      | fromJust serverN `elem` serverStyle2 = trace urlStyle2 urlStyle2
+      | fromJust serverN `elem` serverStyle3 = trace urlStyle3 urlStyle3
+      | fromJust serverN `elem` serverStyle4 = trace urlStyle4 urlStyle4
+      | fromJust serverN `elem` serverStyle5 = trace urlStyle5 urlStyle5
+      | otherwise = trace urlStyle6 urlStyle6
 
+    -- pele.bbspink.com/vault/_datArea/erobbs/oyster/1285/1285357421.dat
+    -- BBSPink Pool
     urlStyle1 :: String
-    urlStyle1 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/_datArea/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
+    urlStyle1 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/_datArea/", fromJust boardN, "/", checkForPool, "/",  fromJust postN, ".dat"]
     
+    -- BBSPink Archives
     urlStyle2 :: String
     urlStyle2 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/", postFirstFour, "/", postFirstFive, "/", fromJust postN, ".dat.gz"]
 
+    -- BBSPink Archives
     urlStyle3 :: String
     urlStyle3 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/kako/", postFirstFour, "/", postFirstFive, "/", fromJust postN, ".dat"]
 
+    -- BBSPink Archives
     urlStyle4 :: String
     urlStyle4 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/kako/", postFirstThree, "/", fromJust postN, ".dat"]
 
+    -- 2ch Pool
     urlStyle5 :: String
     urlStyle5 = mconcat ["http://", fromJust serverN, ".2ch.net/vault/_datArea/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
 
-    --http://banana3000.maido3.com/~ch2live20/vault/
-    -- banana3000.maido3.com/<server>/vault/<board>/oyster/<first four>/<dat>.dat
+    -- 2ch Archives
     urlStyle6 :: String
-    --urlStyle6 = mconcat ["http://banana3000.maido3.com/", fromJust serverName2ch, "/vault/", fromJust boardN, "/", checkForPool, "/", fromJust postN, ".dat"]
-    -- new style: 
-    -- http://human7.hanako.2ch.net/vault/nohodame/oyster/1057/1057605617.dat
     urlStyle6 = mconcat ["http://", fromJust serverN, ".hanako.2ch.net/vault/", fromJust boardN, "/oyster/", postFirstFour, "/", fromJust postN, ".dat"]
 
     -- Check if pool or oyster. If it is oyster, then append the post's first four dat numbers.
@@ -63,6 +66,7 @@ buildUrl poolOrOyster serverN boardN postN
       | poolOrOyster == "oyster" = mconcat [poolOrOyster, "/", postFirstFour]
       | otherwise = poolOrOyster 
 
+    {--
     serverName2ch :: Maybe String
     serverName2ch 
       | isNothing lookedUp = serverN -- Check if the servername is in the archived server list
@@ -85,9 +89,6 @@ buildUrl poolOrOyster serverN boardN postN
 
     serverStyle5 :: [String]
     serverStyle5 = ["hayabusa","hayabusa2","yuzuru","hibari","awabi","kamome","ikura","toro","hato","anago","engawa","qb5","qb7","kohada","uni"]
-
-    -- this was so long, its in the 2CHBOARDS.hs file
-    serverStyle6 :: [String]
-    serverStyle6 = serverStyle6'
+--}
 
 
