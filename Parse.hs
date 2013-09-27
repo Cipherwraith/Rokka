@@ -172,7 +172,7 @@ parseInput input = if fst getServer && fst getBoard && fst getPost
     getServer :: (Bool, Maybe String)
     getServer 
       | length splitBySlashes < 4  = (False, Nothing) -- Check if there are more than 4 Strings in the list
-      | (splitBySlashes !! 1) `S.member` listOfServers = (True, Just $ splitBySlashes !! 1)-- Check if the first in the list (ie pele) is in the server list
+      | (splitBySlashes !! 1) `S.member` listOfAllServers = (True, Just $ splitBySlashes !! 1)-- Check if the first in the list (ie pele) is in the server list
       | otherwise = (False, Nothing) -- If not, then return with nothing
 
     getBoard :: (Bool, Maybe String)
