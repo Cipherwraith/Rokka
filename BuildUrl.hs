@@ -29,17 +29,23 @@ buildUrl poolOrOyster serverN boardN postN
 
     checkUrlStyle :: String
     checkUrlStyle
-      | fromJust serverN `elem` serverStyle1 = trace (urlStyle1) urlStyle1
+      | fromJust serverN `elem` serverStyle0 = trace urlStyle0 urlStyle0
+      | fromJust serverN `elem` serverStyle1 = trace urlStyle1 urlStyle1
       | fromJust serverN `elem` serverStyle2 = trace urlStyle2 urlStyle2
       | fromJust serverN `elem` serverStyle3 = trace urlStyle3 urlStyle3
       | fromJust serverN `elem` serverStyle4 = trace urlStyle4 urlStyle4
       | fromJust serverN `elem` serverStyle5 = trace urlStyle5 urlStyle5
       | otherwise = trace urlStyle6 urlStyle6
+    
+    -- BBSPink turing server
+    urlStyle0 :: String
+    urlStyle0 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/", fromJust boardN, "/", checkForPool, "/",  fromJust postN, ".dat"]
 
     -- pele.bbspink.com/vault/_datArea/erobbs/oyster/1285/1285357421.dat
     -- BBSPink Pool
     urlStyle1 :: String
     urlStyle1 = mconcat ["http://", fromJust serverN, ".bbspink.com/vault/_datArea/", fromJust boardN, "/", checkForPool, "/",  fromJust postN, ".dat"]
+
     
     -- BBSPink Archives
     urlStyle2 :: String
@@ -65,30 +71,5 @@ buildUrl poolOrOyster serverN boardN postN
     checkForPool 
       | poolOrOyster == "oyster" = mconcat [poolOrOyster, "/", postFirstFour]
       | otherwise = poolOrOyster 
-
-    {--
-    serverName2ch :: Maybe String
-    serverName2ch 
-      | isNothing lookedUp = serverN -- Check if the servername is in the archived server list
-      | otherwise = lookedUp -- If it is, then return the proper name for banana3000
-     where
-      name' = fromJust serverN
-      lookedUp = M.lookup name' serverMap
-
-    serverStyle1 :: [String]
-    serverStyle1 = ["babiru","qiufen","idol","set","venus","yomi","sakura01","peach","sakura02","pie","kilauea","pele"]
-
-    serverStyle2 :: [String]
-    serverStyle2 = ["vip"]
-
-    serverStyle3 :: [String]
-    serverStyle3 = ["okazu","wow","pink"]
-
-    serverStyle4 :: [String]
-    serverStyle4 = ["www2"]
-
-    serverStyle5 :: [String]
-    serverStyle5 = ["hayabusa","hayabusa2","yuzuru","hibari","awabi","kamome","ikura","toro","hato","anago","engawa","qb5","qb7","kohada","uni"]
---}
 
 
