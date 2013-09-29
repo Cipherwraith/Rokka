@@ -92,7 +92,7 @@ prepOut :: HeaderNew -> Int -> BL.ByteString -> BL.ByteString -> [BL.ByteString]
 prepOut getInput code outgoingHeader msg'
   | httpMethod == "HEAD" = [outgoingHeader] -- HEAD: just return header
   | httpMethod == "GET" = [outgoingHeader, msg'] -- GET: return header and message
-  | httpMethod `elem` methods = [error405NotAllowed] -- All other methods: output a 405 error here!
+  | httpMethod `elem` methods = [error400BadRequest] -- All other methods: output a 400 error here!
   | code == 404 = [outgoingHeader, msg']
   | code == 401 = [outgoingHeader, msg']
   | code == 400 = [outgoingHeader, msg']
