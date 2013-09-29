@@ -33,3 +33,6 @@ error405NotAllowed = BL.pack $ "HTTP/1.0 405 Method Not Allowed\r\nContent-Type:
 
 error404NotFound :: BL.ByteString
 error404NotFound = BL.pack $ "HTTP/1.0 404 Not Found\r\nContent-Type: text/plain; charset=\"Shift_JIS\"\r\nContent-Length: 8\r\n\r\nError 13"
+
+error400BadRequest :: BL.ByteString
+error400BadRequest = BL.pack $ "HTTP/1.0 400 Bad Request\r\nContent-Type: text/plain; charset=\"Shift_JIS\"\r\nContent-Length: 9\r\n\r\nError 666"
