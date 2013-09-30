@@ -35,7 +35,7 @@ main = withSocketsDo $ do
 loop sock = do
   (h,x,z) <- accept sock
   currTime <- epochTime
-  rand <- randomRIO (100,999) :: IO Int
+  rand <- randomRIO (1000000,9999999) :: IO Int
   _ <- forkIO $ toLog "ip" $ mconcat [show currTime, " ", encryptT x rand]
   -- process one line at a time
   hSetBuffering h LineBuffering
