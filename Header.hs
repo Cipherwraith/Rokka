@@ -150,15 +150,3 @@ headerStream headerIn = getHeaderStream (lines $ headerIn) [] 0
       | otherwise = getHeaderStream hs (h:m) i
 
 
-testHeader1 = "GET /path/to/file/index.html HTTP/1.0\r\nUser-agent: Mozilla/3.0Gold\r\nAccept-Encoding: gzip\r\n\r\n"
-
-testHeader2 = "GET http://www.tiggerwigger.com/ HTTP/1.0\r\nProxy-Connection: Keep-Alive\r\nUser-Agent: Mozilla/5.0 [en] (X11; I; Linux 2.2.3 i686)\r\nHost: www.tiggerwigger.com\r\nAccept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, image/png, \r\nAccept-Encoding: gzip\r\nAccept-Language: en\r\nAccept-Charset: iso-8859-1, *, utf-8\r\n\r\n"
-
-testHeader3 = "GET http://www.tiggerwigger.com/ HTTP/1.0\r\nProxy-Connection: Keep-Alive\r\nHost: www.tiggerwigger.com\r\nAccept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, image/png, \r\nAccept-Encoding: zip\r\nAccept-Language: en\r\nAccept-Charset: iso-8859-1, *, utf-8\r\n\r\n"
-
-testHeader4 = "GET http://www.tiggerwigger.com/ HTTP/1.0\r\nProxy-Connection: Keep-Alive\r\nHost: www.tiggerwigger.com\r\nAccept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, image/png, \r\nAccept-Encoding: zip\r\nAccept-Language: en\r\nAccept-Charset: iso-8859-1, *, utf-8\r\n"
-
-testHeader5 = ""
-
-testHeader6 = "HEAD http://www.tiggerwigger.com/ HTTP/1.0\r\nProxy-Connection: Keep-Alive\r\nHost: www.tiggerwigger.com\r\nAccept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, image/png, \r\nAccept-Encoding: zip\r\nAccept-Language: en\r\nAccept-Charset: iso-8859-1, *, utf-8\r\n"
-
