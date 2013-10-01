@@ -128,7 +128,7 @@ Rokka
 
 	Rokka System Specification Ver. 2013/09/27 02JST  Copyright (c) N.T. Technology, Inc.
 
-	Rokka System is the new method to get 2ch/bbspink archived dats. 
+	Rokka System is the new method to get 2ch/bbspink archived dats. If the English and Japanese version of this document are different, then the English version is the correct version.
 
 	Rokka retrieves dat files:
 	  archived 2ch dat files
