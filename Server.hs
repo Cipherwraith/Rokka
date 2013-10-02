@@ -35,7 +35,7 @@ main = withSocketsDo $ do
 loop sock = do
   (h,x,z) <- accept sock
   currTime <- epochTime
-  rand <- randomRIO (1000000,9999999) :: IO Int
+  rand <- randomRIO (100,999) :: IO Int
   _ <- forkIO $ toLog "ip" $ mconcat [show currTime, " ", encryptT x rand]
   -- process one line at a time
   hSetBuffering h LineBuffering
@@ -92,7 +92,7 @@ prepOut :: HeaderNew -> Int -> BL.ByteString -> BL.ByteString -> [BL.ByteString]
 prepOut getInput code outgoingHeader msg'
   | httpMethod == "HEAD" = [outgoingHeader] -- HEAD: just return header
   | httpMethod == "GET" = [outgoingHeader, msg'] -- GET: return header and message
-  | httpMethod `elem` methods = [error400BadRequest] -- All other methods: output a 400 error here!
+  | httpMethod `elem` methods = [error501NotImplemented] -- All other methods: output a 400 error here!
   | code == 404 = [outgoingHeader, msg']
   | code == 401 = [outgoingHeader, msg']
   | code == 400 = [outgoingHeader, msg']
