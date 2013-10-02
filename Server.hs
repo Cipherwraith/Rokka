@@ -35,7 +35,7 @@ main = withSocketsDo $ do
 loop sock = do
   (h,x,z) <- accept sock
   currTime <- epochTime
-  _ <- logEncryptedConnections currTime x
+  _ <- encryptThenLogIP currTime x
   
   -- process one line at a time
   hSetBuffering h LineBuffering
